@@ -216,7 +216,7 @@ export const ExpensesTab: React.FC<ExpensesTabProps> = ({
                       </td>
                       <td className="px-8 py-8 font-bold text-rose-600 text-lg">₱{expense.amount.toLocaleString()}</td>
                       <td className="px-8 py-8 text-right">
-                        {(isAdmin || isManager) && (
+                        {isAdmin && (
                           <button
                             onClick={() => handleDeleteExpense(expense.id)}
                             className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"

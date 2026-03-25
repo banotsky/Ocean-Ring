@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { dashboardService } from '../services/dashboardService';
-import { InventoryItem, SaleRecord, ExpenseRecord, TabType, LedgerEntry, WarehouseItem } from '../types/dashboard';
+import { InventoryItem, SaleRecord, ExpenseRecord, TabType, LedgerEntry } from '../types/dashboard';
 
 export function useDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [warehouse, setWarehouse] = useState<WarehouseItem[]>([]);
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,13 +19,12 @@ export function useDashboard() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
-
-  const [newWarehouseItemName, setNewWarehouseItemName] = useState('');
-  const [newWarehouseItemQty, setNewWarehouseItemQty] = useState('');
-  const [newWarehouseItemUnit, setNewWarehouseItemUnit] = useState('');
+  const [newItemClassification, setNewItemClassification] = useState('');
+  const [newItemUnit, setNewItemUnit] = useState('');
 
   const [restockItemId, setRestockItemId] = useState('');
   const [restockQty, setRestockQty] = useState('');
+  const [restockPrice, setRestockPrice] = useState('');
   const [isRestockExpense, setIsRestockExpense] = useState(false);
 
   const [calcMultiplier, setCalcMultiplier] = useState('');
@@ -38,10 +36,10 @@ export function useDashboard() {
   const [expenseDesc, setExpenseDesc] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [warehouseSearchTerm, setWarehouseSearchTerm] = useState('');
   const [salesSearchTerm, setSalesSearchTerm] = useState('');
   const [expenseSearchTerm, setExpenseSearchTerm] = useState('');
   const [ledgerSearchTerm, setLedgerSearchTerm] = useState('');
+  const [inventoryClassificationFilter, setInventoryClassificationFilter] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [useDateFilter, setUseDateFilter] = useState(false);
   const [expenseSelectedDate, setExpenseSelectedDate] = useState<Date>(new Date());
@@ -54,11 +52,7 @@ export function useDashboard() {
   const [editName, setEditName] = useState('');
   const [editQty, setEditQty] = useState('');
   const [editPrice, setEditPrice] = useState('');
-
-  const [editingWarehouseItem, setEditingWarehouseItem] = useState<WarehouseItem | null>(null);
-  const [editWarehouseName, setEditWarehouseName] = useState('');
-  const [editWarehouseQty, setEditWarehouseQty] = useState('');
-  const [editWarehouseUnit, setEditWarehouseUnit] = useState('');
+  const [editUnit, setEditUnit] = useState('');
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -80,14 +74,12 @@ export function useDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [invData, warehouseData, salesData, expensesData] = await Promise.all([
+      const [invData, salesData, expensesData] = await Promise.all([
         dashboardService.fetchInventory(),
-        dashboardService.fetchWarehouse(),
         dashboardService.fetchSales(),
         dashboardService.fetchExpenses()
       ]);
       setInventory(invData);
-      setWarehouse(warehouseData);
       setSales(salesData);
       setExpenses(expensesData);
     } catch (err: any) {
@@ -128,35 +120,19 @@ export function useDashboard() {
       const newItem = await dashboardService.addItem({
         name: newItemName,
         quantity: parseInt(newItemQty),
-        price: parseFloat(newItemPrice)
+        price: parseFloat(newItemPrice),
+        classification: newItemClassification,
+        unit: newItemUnit
       });
       setInventory([...inventory, newItem].sort((a, b) => a.name.localeCompare(b.name)));
       setNewItemName('');
       setNewItemQty('');
       setNewItemPrice('');
+      setNewItemClassification('');
+      setNewItemUnit('');
       setCalcMultiplier('');
       setCalcBase('');
       setToast({ message: 'Item registered successfully', type: 'success' });
-    } catch (err: any) {
-      setToast({ message: err.message, type: 'error' });
-    }
-  };
-
-  const handleAddWarehouseItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const newItem = await dashboardService.addWarehouseItem({
-        name: newWarehouseItemName,
-        quantity: parseFloat(newWarehouseItemQty),
-        unit: newWarehouseItemUnit
-      });
-      setWarehouse([...warehouse, newItem].sort((a, b) => a.name.localeCompare(b.name)));
-      setNewWarehouseItemName('');
-      setNewWarehouseItemQty('');
-      setNewWarehouseItemUnit('');
-      setCalcMultiplier('');
-      setCalcBase('');
-      setToast({ message: 'Material registered in warehouse', type: 'success' });
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
     }
@@ -169,26 +145,42 @@ export function useDashboard() {
 
     try {
       const addedQty = parseInt(restockQty);
-      const newQty = item.quantity + addedQty;
-      
-      await dashboardService.updateItem(restockItemId, { quantity: newQty });
+      const restockPriceNum = parseFloat(restockPrice);
+
+      if (restockPriceNum === item.price) {
+        // Merge: Update existing item
+        const newQty = item.quantity + addedQty;
+        await dashboardService.updateItem(restockItemId, { quantity: newQty });
+        setInventory(inventory.map(i => i.id === restockItemId ? { ...i, quantity: newQty } : i));
+        setToast({ message: `Added ${addedQty} to ${item.name}`, type: 'success' });
+      } else {
+        // Don't merge: Add new item entry
+        const newItem = await dashboardService.addItem({
+          name: item.name,
+          quantity: addedQty,
+          price: restockPriceNum,
+          classification: item.classification,
+          unit: item.unit
+        });
+        setInventory([...inventory, newItem].sort((a, b) => a.name.localeCompare(b.name)));
+        setToast({ message: `Added ${addedQty} of ${item.name} at new price ₱${restockPriceNum}`, type: 'success' });
+      }
 
       if (isRestockExpense) {
-        const cost = addedQty * item.price;
+        const cost = addedQty * restockPriceNum;
         await dashboardService.addExpense({
-          description: `Restock: ${item.name} (x${addedQty})`,
+          description: `Restock: ${item.name} (x${addedQty} @ ₱${restockPriceNum})`,
           amount: cost
         });
         fetchData(); 
       }
 
-      setInventory(inventory.map(i => i.id === restockItemId ? { ...i, quantity: newQty } : i));
       setRestockItemId('');
       setRestockQty('');
+      setRestockPrice('');
       setIsRestockExpense(false);
       setCalcMultiplier('');
       setCalcBase('');
-      setToast({ message: `Added ${addedQty} to ${item.name}`, type: 'success' });
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
     }
@@ -212,36 +204,12 @@ export function useDashboard() {
     });
   };
 
-  const handleDeleteWarehouseItem = async (id: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Delete Material',
-      message: 'Are you sure you want to remove this material from warehouse?',
-      onConfirm: async () => {
-        try {
-          await dashboardService.deleteWarehouseItem(id);
-          setWarehouse(warehouse.filter(item => item.id !== id));
-          setToast({ message: 'Material deleted', type: 'success' });
-        } catch (err: any) {
-          setToast({ message: err.message, type: 'error' });
-        }
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
-
   const handleStartEdit = (item: InventoryItem) => {
     setEditingItem(item);
     setEditName(item.name);
     setEditQty(item.quantity.toString());
     setEditPrice(item.price.toString());
-  };
-
-  const handleStartEditWarehouse = (item: WarehouseItem) => {
-    setEditingWarehouseItem(item);
-    setEditWarehouseName(item.name);
-    setEditWarehouseQty(item.quantity.toString());
-    setEditWarehouseUnit(item.unit);
+    setEditUnit(item.unit || '');
   };
 
   const handleUpdateItem = async (e: React.FormEvent) => {
@@ -252,31 +220,13 @@ export function useDashboard() {
       const updates = {
         name: editName,
         quantity: parseInt(editQty),
-        price: parseFloat(editPrice)
+        price: parseFloat(editPrice),
+        unit: editUnit
       };
       await dashboardService.updateItem(editingItem.id, updates);
       setInventory(inventory.map(i => i.id === editingItem.id ? { ...i, ...updates } : i));
       setEditingItem(null);
       setToast({ message: 'Item updated successfully', type: 'success' });
-    } catch (err: any) {
-      setToast({ message: err.message, type: 'error' });
-    }
-  };
-
-  const handleUpdateWarehouseItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingWarehouseItem) return;
-
-    try {
-      const updates = {
-        name: editWarehouseName,
-        quantity: parseFloat(editWarehouseQty),
-        unit: editWarehouseUnit
-      };
-      await dashboardService.updateWarehouseItem(editingWarehouseItem.id, updates);
-      setWarehouse(warehouse.map(i => i.id === editingWarehouseItem.id ? { ...i, ...updates } : i));
-      setEditingWarehouseItem(null);
-      setToast({ message: 'Material updated successfully', type: 'success' });
     } catch (err: any) {
       setToast({ message: err.message, type: 'error' });
     }
@@ -390,18 +340,18 @@ export function useDashboard() {
 
   return {
     activeTab, setActiveTab,
-    inventory, warehouse, sales, expenses,
+    inventory, sales, expenses,
     loading, error,
     isSidebarOpen, setIsSidebarOpen,
     isAdmin, isManager, userEmail,
     newItemName, setNewItemName,
     newItemQty, setNewItemQty,
     newItemPrice, setNewItemPrice,
-    newWarehouseItemName, setNewWarehouseItemName,
-    newWarehouseItemQty, setNewWarehouseItemQty,
-    newWarehouseItemUnit, setNewWarehouseItemUnit,
+    newItemClassification, setNewItemClassification,
+    newItemUnit, setNewItemUnit,
     restockItemId, setRestockItemId,
     restockQty, setRestockQty,
+    restockPrice, setRestockPrice,
     isRestockExpense, setIsRestockExpense,
     calcMultiplier, setCalcMultiplier,
     calcBase, setCalcBase,
@@ -410,10 +360,10 @@ export function useDashboard() {
     expenseDesc, setExpenseDesc,
     expenseAmount, setExpenseAmount,
     searchTerm, setSearchTerm,
-    warehouseSearchTerm, setWarehouseSearchTerm,
     salesSearchTerm, setSalesSearchTerm,
     expenseSearchTerm, setExpenseSearchTerm,
     ledgerSearchTerm, setLedgerSearchTerm,
+    inventoryClassificationFilter, setInventoryClassificationFilter,
     selectedDate, setSelectedDate,
     useDateFilter, setUseDateFilter,
     expenseSelectedDate, setExpenseSelectedDate,
@@ -424,14 +374,11 @@ export function useDashboard() {
     editName, setEditName,
     editQty, setEditQty,
     editPrice, setEditPrice,
-    editingWarehouseItem, setEditingWarehouseItem,
-    editWarehouseName, setEditWarehouseName,
-    editWarehouseQty, setEditWarehouseQty,
-    editWarehouseUnit, setEditWarehouseUnit,
+    editUnit, setEditUnit,
     confirmModal, setConfirmModal,
     toast, setToast,
-    handleAddItem, handleAddWarehouseItem, handleRestock, handleDeleteItem, handleDeleteWarehouseItem,
-    handleStartEdit, handleStartEditWarehouse, handleUpdateItem, handleUpdateWarehouseItem, handleRecordSale,
+    handleAddItem, handleRestock, handleDeleteItem,
+    handleStartEdit, handleUpdateItem, handleRecordSale,
     handleDeleteSale, handleAddExpense, handleDeleteExpense,
     getLedger, fetchData
   };

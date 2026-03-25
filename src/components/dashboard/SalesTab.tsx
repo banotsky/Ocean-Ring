@@ -250,7 +250,7 @@ export const SalesTab: React.FC<SalesTabProps> = ({
                       <td className="px-8 py-8 font-semibold text-slate-600 text-lg">{sale.quantity_sold} units</td>
                       <td className="px-8 py-8 font-bold text-emerald-600 text-lg">₱{sale.total_price.toLocaleString()}</td>
                       <td className="px-8 py-8 text-right">
-                        {(isAdmin || isManager) && (
+                        {isAdmin && (
                           <button
                             onClick={() => handleDeleteSale(sale)}
                             className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"

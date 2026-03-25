@@ -19,16 +19,24 @@ interface InventoryTabProps {
   isManager: boolean;
   searchTerm: string;
   setSearchTerm: (val: string) => void;
+  classificationFilter: string;
+  setClassificationFilter: (val: string) => void;
   newItemName: string;
   setNewItemName: (val: string) => void;
   newItemQty: string;
   setNewItemQty: (val: string) => void;
   newItemPrice: string;
   setNewItemPrice: (val: string) => void;
+  newItemClassification: string;
+  setNewItemClassification: (val: string) => void;
+  newItemUnit: string;
+  setNewItemUnit: (val: string) => void;
   restockItemId: string;
   setRestockItemId: (val: string) => void;
   restockQty: string;
   setRestockQty: (val: string) => void;
+  restockPrice: string;
+  setRestockPrice: (val: string) => void;
   isRestockExpense: boolean;
   setIsRestockExpense: (val: boolean) => void;
   calcMultiplier: string;
@@ -44,18 +52,23 @@ interface InventoryTabProps {
 export const InventoryTab: React.FC<InventoryTabProps> = ({
   inventory, isAdmin, isManager,
   searchTerm, setSearchTerm,
+  classificationFilter, setClassificationFilter,
   newItemName, setNewItemName,
   newItemQty, setNewItemQty,
   newItemPrice, setNewItemPrice,
+  newItemClassification, setNewItemClassification,
+  newItemUnit, setNewItemUnit,
   restockItemId, setRestockItemId,
   restockQty, setRestockQty,
+  restockPrice, setRestockPrice,
   isRestockExpense, setIsRestockExpense,
   calcMultiplier, setCalcMultiplier,
   calcBase, setCalcBase,
   handleAddItem, handleRestock, handleDeleteItem, handleStartEdit
 }) => {
   const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    (classificationFilter === '' || item.classification?.toLowerCase() === classificationFilter.toLowerCase())
   );
 
   return (
@@ -86,6 +99,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none font-medium text-slate-700 placeholder:text-slate-400"
           />
+        </div>
+        <div className="w-full lg:w-64">
+          <select
+            value={classificationFilter}
+            onChange={(e) => setClassificationFilter(e.target.value)}
+            className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none font-medium text-slate-700"
+          >
+            <option value="">All Classifications</option>
+            {Array.from(new Set(inventory.map(i => i.classification).filter(Boolean))).map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -149,6 +174,26 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                   />
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Classification</label>
+                <input
+                  type="text"
+                  value={newItemClassification}
+                  onChange={(e) => setNewItemClassification(e.target.value)}
+                  placeholder="e.g. Plumbing"
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Unit</label>
+                <input
+                  type="text"
+                  value={newItemUnit}
+                  onChange={(e) => setNewItemUnit(e.target.value)}
+                  placeholder="e.g. bags, pcs, kg"
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                />
+              </div>
             </div>
             <button
               type="submit"
@@ -209,6 +254,18 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                   required
                 />
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 ml-1">Restock Price (₱)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={restockPrice}
+                  onChange={(e) => setRestockPrice(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all outline-none"
+                  required
+                />
+              </div>
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
                 <input
                   type="checkbox"
@@ -252,6 +309,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
             <thead>
               <tr className="bg-slate-50/50">
                 <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Product Details</th>
+                <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Classification</th>
                 <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Stock Level</th>
                 <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Unit Price</th>
                 <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Total Value</th>
@@ -275,6 +333,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                       <span className="font-bold text-slate-900 text-lg">{item.name}</span>
                     </div>
                   </td>
+                  <td className="px-8 py-8 text-slate-600 font-medium">{item.classification || '-'}</td>
                   <td className="px-8 py-8">
                     <div className="flex items-center gap-4">
                       <span className={`px-5 py-2 rounded-full text-sm font-bold border ${
@@ -303,7 +362,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                       >
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      {(isAdmin || isManager) && (
+                      {isAdmin && (
                         <button
                           onClick={() => handleDeleteItem(item.id)}
                           className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"

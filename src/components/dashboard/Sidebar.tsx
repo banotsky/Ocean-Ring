@@ -8,7 +8,8 @@ import {
   LogOut, 
   X,
   ChevronRight,
-  Warehouse
+  Warehouse,
+  UserPlus
 } from 'lucide-react';
 import { TabType } from '../../types/dashboard';
 import { supabase } from '../../lib/supabase';
@@ -19,12 +20,14 @@ interface SidebarProps {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (isOpen: boolean) => void;
   userEmail: string | null;
+  isAdmin: boolean;
+  isManager: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab, setActiveTab,
   isSidebarOpen, setIsSidebarOpen,
-  userEmail
+  userEmail, isAdmin, isManager
 }) => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -37,7 +40,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'sales', label: 'Sales', icon: ShoppingCart },
     { id: 'miscellaneous', label: 'Expenses', icon: Receipt },
     { id: 'ledger', label: 'Ledger', icon: BookOpen },
-  ];
+    { id: 'create-user', label: 'Create User', icon: UserPlus },
+  ].filter(item => {
+    if (item.id === 'ledger') return isAdmin;
+    if (item.id === 'create-user') return isAdmin;
+    if (item.id === 'miscellaneous') return isAdmin || isManager;
+    return true;
+  });
 
   return (
     <>

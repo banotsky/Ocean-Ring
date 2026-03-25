@@ -1,19 +1,10 @@
 import { supabase } from '../lib/supabase';
-import { InventoryItem, SaleRecord, ExpenseRecord, WarehouseItem } from '../types/dashboard';
+import { InventoryItem, SaleRecord, ExpenseRecord } from '../types/dashboard';
 
 export const dashboardService = {
   async fetchInventory(): Promise<InventoryItem[]> {
     const { data, error } = await supabase
       .from('inventory')
-      .select('*')
-      .order('name');
-    if (error) throw error;
-    return data || [];
-  },
-
-  async fetchWarehouse(): Promise<WarehouseItem[]> {
-    const { data, error } = await supabase
-      .from('warehouse')
       .select('*')
       .order('name');
     if (error) throw error;
@@ -47,15 +38,6 @@ export const dashboardService = {
     return data[0];
   },
 
-  async addWarehouseItem(item: Omit<WarehouseItem, 'id' | 'created_at'>): Promise<WarehouseItem> {
-    const { data, error } = await supabase
-      .from('warehouse')
-      .insert([item])
-      .select();
-    if (error) throw error;
-    return data[0];
-  },
-
   async updateItem(id: string, updates: Partial<InventoryItem>): Promise<void> {
     const { error } = await supabase
       .from('inventory')
@@ -64,25 +46,9 @@ export const dashboardService = {
     if (error) throw error;
   },
 
-  async updateWarehouseItem(id: string, updates: Partial<WarehouseItem>): Promise<void> {
-    const { error } = await supabase
-      .from('warehouse')
-      .update(updates)
-      .eq('id', id);
-    if (error) throw error;
-  },
-
   async deleteItem(id: string): Promise<void> {
     const { error } = await supabase
       .from('inventory')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-  },
-
-  async deleteWarehouseItem(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('warehouse')
       .delete()
       .eq('id', id);
     if (error) throw error;

@@ -3,6 +3,9 @@ export interface InventoryItem {
   name: string;
   quantity: number;
   price: number;
+  classification?: string;
+  unit?: string;
+  created_at?: string;
 }
 
 export interface SaleRecord {
@@ -28,12 +31,4 @@ export interface LedgerEntry {
   date: string;
 }
 
-export interface WarehouseItem {
-  id: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  created_at: string;
-}
-
-export type TabType = 'overview' | 'inventory' | 'warehouse' | 'sales' | 'miscellaneous' | 'ledger';
+export type TabType = 'overview' | 'inventory' | 'sales' | 'miscellaneous' | 'ledger' | 'create-user';

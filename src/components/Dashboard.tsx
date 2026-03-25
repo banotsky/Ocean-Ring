@@ -7,27 +7,27 @@ import { useDashboard } from '../hooks/useDashboard';
 import { Sidebar } from './dashboard/Sidebar';
 import { OverviewTab } from './dashboard/OverviewTab';
 import { InventoryTab } from './dashboard/InventoryTab';
-import { WarehouseTab } from './dashboard/WarehouseTab';
 import { SalesTab } from './dashboard/SalesTab';
 import { ExpensesTab } from './dashboard/ExpensesTab';
 import { LedgerTab } from './dashboard/LedgerTab';
+import { CreateUserTab } from './dashboard/CreateUserTab';
 import { EditItemModal, EditWarehouseItemModal, ConfirmModal, Toast } from './dashboard/Modals';
 
 export default function Dashboard() {
   const {
     activeTab, setActiveTab,
-    inventory, warehouse, sales, expenses,
+    inventory, sales, expenses,
     loading, error,
     isSidebarOpen, setIsSidebarOpen,
     isAdmin, isManager, userEmail,
     newItemName, setNewItemName,
     newItemQty, setNewItemQty,
     newItemPrice, setNewItemPrice,
-    newWarehouseItemName, setNewWarehouseItemName,
-    newWarehouseItemQty, setNewWarehouseItemQty,
-    newWarehouseItemUnit, setNewWarehouseItemUnit,
+    newItemClassification, setNewItemClassification,
+    newItemUnit, setNewItemUnit,
     restockItemId, setRestockItemId,
     restockQty, setRestockQty,
+    restockPrice, setRestockPrice,
     isRestockExpense, setIsRestockExpense,
     calcMultiplier, setCalcMultiplier,
     calcBase, setCalcBase,
@@ -36,10 +36,10 @@ export default function Dashboard() {
     expenseDesc, setExpenseDesc,
     expenseAmount, setExpenseAmount,
     searchTerm, setSearchTerm,
-    warehouseSearchTerm, setWarehouseSearchTerm,
     salesSearchTerm, setSalesSearchTerm,
     expenseSearchTerm, setExpenseSearchTerm,
     ledgerSearchTerm, setLedgerSearchTerm,
+    inventoryClassificationFilter, setInventoryClassificationFilter,
     selectedDate, setSelectedDate,
     useDateFilter, setUseDateFilter,
     expenseSelectedDate, setExpenseSelectedDate,
@@ -50,14 +50,11 @@ export default function Dashboard() {
     editName, setEditName,
     editQty, setEditQty,
     editPrice, setEditPrice,
-    editingWarehouseItem, setEditingWarehouseItem,
-    editWarehouseName, setEditWarehouseName,
-    editWarehouseQty, setEditWarehouseQty,
-    editWarehouseUnit, setEditWarehouseUnit,
+    editUnit, setEditUnit,
     confirmModal, setConfirmModal,
     toast,
-    handleAddItem, handleAddWarehouseItem, handleRestock, handleDeleteItem, handleDeleteWarehouseItem,
-    handleStartEdit, handleStartEditWarehouse, handleUpdateItem, handleUpdateWarehouseItem, handleRecordSale,
+    handleAddItem, handleRestock, handleDeleteItem,
+    handleStartEdit, handleUpdateItem, handleRecordSale,
     handleDeleteSale, handleAddExpense, handleDeleteExpense,
     getLedger
   } = useDashboard();
@@ -120,12 +117,20 @@ export default function Dashboard() {
             setNewItemQty={setNewItemQty}
             newItemPrice={newItemPrice}
             setNewItemPrice={setNewItemPrice}
+            newItemClassification={newItemClassification}
+            setNewItemClassification={setNewItemClassification}
+            newItemUnit={newItemUnit}
+            setNewItemUnit={setNewItemUnit}
+            classificationFilter={inventoryClassificationFilter}
+            setClassificationFilter={setInventoryClassificationFilter}
             restockItemId={restockItemId}
             setRestockItemId={setRestockItemId}
             restockQty={restockQty}
             setRestockQty={setRestockQty}
             isRestockExpense={isRestockExpense}
             setIsRestockExpense={setIsRestockExpense}
+            restockPrice={restockPrice}
+            setRestockPrice={setRestockPrice}
             calcMultiplier={calcMultiplier}
             setCalcMultiplier={setCalcMultiplier}
             calcBase={calcBase}
@@ -134,29 +139,6 @@ export default function Dashboard() {
             handleRestock={handleRestock}
             handleDeleteItem={handleDeleteItem}
             handleStartEdit={handleStartEdit}
-          />
-        );
-      case 'warehouse':
-        return (
-          <WarehouseTab 
-            warehouse={warehouse}
-            isAdmin={isAdmin}
-            isManager={isManager}
-            warehouseSearchTerm={warehouseSearchTerm}
-            setWarehouseSearchTerm={setWarehouseSearchTerm}
-            newWarehouseItemName={newWarehouseItemName}
-            setNewWarehouseItemName={setNewWarehouseItemName}
-            newWarehouseItemQty={newWarehouseItemQty}
-            setNewWarehouseItemQty={setNewWarehouseItemQty}
-            newWarehouseItemUnit={newWarehouseItemUnit}
-            setNewWarehouseItemUnit={setNewWarehouseItemUnit}
-            calcMultiplier={calcMultiplier}
-            setCalcMultiplier={setCalcMultiplier}
-            calcBase={calcBase}
-            setCalcBase={setCalcBase}
-            handleAddWarehouseItem={handleAddWarehouseItem}
-            handleDeleteWarehouseItem={handleDeleteWarehouseItem}
-            handleStartEditWarehouse={handleStartEditWarehouse}
           />
         );
       case 'sales':
@@ -185,6 +167,7 @@ export default function Dashboard() {
           />
         );
       case 'miscellaneous':
+        if (!isAdmin && !isManager) return null;
         return (
           <ExpensesTab 
             expenses={expenses}
@@ -205,6 +188,7 @@ export default function Dashboard() {
           />
         );
       case 'ledger':
+        if (!isAdmin) return null;
         return (
           <LedgerTab 
             ledger={getLedger()}
@@ -216,6 +200,9 @@ export default function Dashboard() {
             setUseLedgerDateFilter={setUseLedgerDateFilter}
           />
         );
+      case 'create-user':
+        if (!isAdmin) return null;
+        return <CreateUserTab />;
       default:
         return null;
     }
@@ -229,6 +216,8 @@ export default function Dashboard() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         userEmail={userEmail}
+        isAdmin={isAdmin}
+        isManager={isManager}
       />
 
       {/* Main Content */}
@@ -282,18 +271,8 @@ export default function Dashboard() {
         setEditQty={setEditQty}
         editPrice={editPrice}
         setEditPrice={setEditPrice}
-      />
-
-      <EditWarehouseItemModal 
-        isOpen={!!editingWarehouseItem}
-        onClose={() => setEditingWarehouseItem(null)}
-        onSubmit={handleUpdateWarehouseItem}
-        editName={editWarehouseName}
-        setEditName={setEditWarehouseName}
-        editQty={editWarehouseQty}
-        setEditQty={setEditWarehouseQty}
-        editUnit={editWarehouseUnit}
-        setEditUnit={setEditWarehouseUnit}
+        editUnit={editUnit}
+        setEditUnit={setEditUnit}
       />
 
       <ConfirmModal 
